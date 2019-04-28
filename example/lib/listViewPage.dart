@@ -37,7 +37,15 @@ class ListViewPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return PlatformScaffold(
       appBar: PlatformAppBar(
-        title: Text('Page List View'),
+        title: PlatformText('Page List View'),
+        trailingActions: <Widget>[
+          PlatformButton(
+              padding: const EdgeInsets.all(0),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: PlatformText('Done'))
+        ],
       ),
       body: ListView(
         children: _words
