@@ -23,17 +23,20 @@ import 'platform_nav_bar.dart';
 import 'widget_base.dart';
 
 abstract class _BaseData {
-  _BaseData({this.widgetKey, this.backgroundColor, this.body});
+  _BaseData(
+      {this.widgetKey, this.backgroundColor, this.body, this.bodyBuilder});
 
   final Color backgroundColor;
   final Widget body;
+  final WidgetBuilder bodyBuilder;
   final Key widgetKey;
 }
 
 class MaterialScaffoldData extends _BaseData {
   MaterialScaffoldData(
       {Color backgroundColor,
-      Widget body,
+      @Deprecated('Use bodyBuilder instead') Widget body,
+      WidgetBuilder bodyBuilder,
       Key widgetKey,
       this.appBar,
       this.bottomNavBar,
@@ -47,7 +50,10 @@ class MaterialScaffoldData extends _BaseData {
       this.resizeToAvoidBottomPadding,
       this.bottomSheet})
       : super(
-            widgetKey: widgetKey, backgroundColor: backgroundColor, body: body);
+            widgetKey: widgetKey,
+            backgroundColor: backgroundColor,
+            body: body,
+            bodyBuilder: bodyBuilder);
 
   final PreferredSizeWidget appBar;
   final Widget bottomNavBar;
@@ -62,20 +68,32 @@ class MaterialScaffoldData extends _BaseData {
   final Widget bottomSheet;
 }
 
+typedef ObstructingPreferredSizeWidget ObstructingPreferredSizeWidgetBuilder(
+    BuildContext context, int index);
+typedef Widget WidgetTabBodyBuilder(BuildContext context, int index);
+
 class CupertinoPageScaffoldData extends _BaseData {
   CupertinoPageScaffoldData(
       {Color backgroundColor,
-      Widget body,
+      @Deprecated('Use bodyBuilder instead') Widget body,
+      WidgetBuilder bodyBuilder,
+      this.iosTabBodyBuilder,
       Key widgetKey,
       this.navigationBar,
+      this.iosNavigationTabBarBuilder,
       this.bottomTabBar,
       this.resizeToAvoidBottomInset,
       this.resizeToAvoidBottomInsetTab,
       this.backgroundColorTab})
       : super(
-            widgetKey: widgetKey, backgroundColor: backgroundColor, body: body);
+            widgetKey: widgetKey,
+            backgroundColor: backgroundColor,
+            body: body,
+            bodyBuilder: bodyBuilder);
 
+  final WidgetTabBodyBuilder iosTabBodyBuilder;
   final ObstructingPreferredSizeWidget navigationBar;
+  final ObstructingPreferredSizeWidgetBuilder iosNavigationTabBarBuilder;
   final CupertinoTabBar bottomTabBar;
   final bool resizeToAvoidBottomInset;
   final bool resizeToAvoidBottomInsetTab;
@@ -86,6 +104,7 @@ class PlatformScaffold extends PlatformWidgetBase<Widget, Scaffold> {
   final Key widgetKey;
 
   final Widget body;
+  final WidgetBuilder bodyBuilder;
   final Color backgroundColor;
   final PlatformAppBar appBar;
   final PlatformNavBar bottomNavBar;
@@ -99,7 +118,8 @@ class PlatformScaffold extends PlatformWidgetBase<Widget, Scaffold> {
   PlatformScaffold({
     Key key,
     this.widgetKey,
-    this.body,
+    @Deprecated('Use bodyBuilder instead') this.body,
+    this.bodyBuilder,
     this.backgroundColor,
     this.appBar,
     this.bottomNavBar,
@@ -116,10 +136,16 @@ class PlatformScaffold extends PlatformWidgetBase<Widget, Scaffold> {
       data = android(context);
     }
 
+    var scaffoldBody = data?.bodyBuilder(context) ?? bodyBuilder(context);
+    if (scaffoldBody == null) {
+      // This will be removed in future versions
+      scaffoldBody = data?.body ?? body;
+    }
+
     return Scaffold(
       key: data?.widgetKey ?? widgetKey,
       backgroundColor: data?.backgroundColor ?? backgroundColor,
-      body: data?.body ?? body,
+      body: scaffoldBody,
       appBar: data?.appBar ?? appBar?.createAndroidWidget(context),
       bottomNavigationBar:
           data?.bottomNavBar ?? bottomNavBar?.createAndroidWidget(context),
@@ -142,7 +168,6 @@ class PlatformScaffold extends PlatformWidgetBase<Widget, Scaffold> {
       data = ios(context);
     }
 
-    Widget child = body ?? data?.body;
     var navigationBar = appBar?.createIosWidget(context) ?? data?.navigationBar;
 
     Widget result;
@@ -156,6 +181,20 @@ class PlatformScaffold extends PlatformWidgetBase<Widget, Scaffold> {
         resizeToAvoidBottomInset: data?.resizeToAvoidBottomInsetTab ?? true,
         tabBar: tabBar,
         tabBuilder: (BuildContext context, int index) {
+          // So that we can get the index from the tab selection
+          if (data?.iosNavigationTabBarBuilder != null) {
+            navigationBar = data?.iosNavigationTabBarBuilder(context, index);
+          }
+          //use iosTabBodyBuilder first, then the bodyBuilder
+          var child = data?.iosTabBodyBuilder(context, index);
+          if (child == null) {
+            child = data?.bodyBuilder(context) ?? bodyBuilder(context);
+          }
+          if (child == null) {
+            // This will be removed in future versions
+            child = data?.body ?? body;
+          }
+
           return CupertinoPageScaffold(
             backgroundColor: data?.backgroundColor ?? backgroundColor,
             child: iosContentPad(context, child, navigationBar, tabBar),
@@ -165,6 +204,12 @@ class PlatformScaffold extends PlatformWidgetBase<Widget, Scaffold> {
         },
       );
     } else {
+      var child = data?.bodyBuilder(context) ?? bodyBuilder(context);
+      if (child == null) {
+        // This will be removed in future versions
+        child = data?.body ?? body;
+      }
+
       result = CupertinoPageScaffold(
         key: data?.widgetKey ?? widgetKey,
         backgroundColor: data?.backgroundColor ?? backgroundColor,
