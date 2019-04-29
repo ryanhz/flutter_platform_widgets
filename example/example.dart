@@ -3,8 +3,10 @@ import 'package:flutter/material.dart' show ThemeData, Colors, Icons, Theme;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 
+import 'lib/iosTabbedPage.dart';
 import 'lib/listViewHeaderPage.dart';
 import 'lib/listViewPage.dart';
+import 'lib/navTabbedPage.dart';
 import 'lib/tabbedPage.dart';
 
 void main() => runApp(Main());
@@ -152,6 +154,17 @@ class LandingPageState extends State<LandingPage> {
             PlatformButton(
               child: PlatformText('Open Tabbed Page'),
               onPressed: () => _openPage((_) => new TabbedPage()),
+            ),
+            PlatformButton(
+              child: PlatformText('Open Tabbed Page with Nav'),
+              onPressed: () => _openPage((_) => new NavTabbedPage()),
+            ),
+            PlatformWidget(
+              ios: (_) => PlatformButton(
+                    child: PlatformText('iOS Tabbed Page'),
+                    onPressed: () => _openPage((_) => new IosTabbedPage()),
+                  ),
+              android: (_) => Container(),
             ),
             Divider(),
             SectionHeader(title: '5. Advanced'),

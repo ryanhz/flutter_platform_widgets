@@ -7,9 +7,10 @@
 import 'package:flutter/cupertino.dart'
     show
         CupertinoPageScaffold,
+        CupertinoTabBar,
         CupertinoTabScaffold,
-        ObstructingPreferredSizeWidget,
-        CupertinoTabBar;
+        CupertinoTabView,
+        ObstructingPreferredSizeWidget;
 import 'package:flutter/material.dart'
     show
         Material,
@@ -35,7 +36,7 @@ abstract class _BaseData {
 class MaterialScaffoldData extends _BaseData {
   MaterialScaffoldData(
       {Color backgroundColor,
-      @Deprecated('Use bodyBuilder instead') Widget body,
+      Widget body,
       WidgetBuilder bodyBuilder,
       Key widgetKey,
       this.appBar,
@@ -75,7 +76,7 @@ typedef Widget WidgetTabBodyBuilder(BuildContext context, int index);
 class CupertinoPageScaffoldData extends _BaseData {
   CupertinoPageScaffoldData(
       {Color backgroundColor,
-      @Deprecated('Use bodyBuilder instead') Widget body,
+      Widget body,
       WidgetBuilder bodyBuilder,
       this.iosTabBodyBuilder,
       Key widgetKey,
@@ -118,7 +119,7 @@ class PlatformScaffold extends PlatformWidgetBase<Widget, Scaffold> {
   PlatformScaffold({
     Key key,
     this.widgetKey,
-    @Deprecated('Use bodyBuilder instead') this.body,
+    this.body,
     this.bodyBuilder,
     this.backgroundColor,
     this.appBar,
@@ -136,7 +137,8 @@ class PlatformScaffold extends PlatformWidgetBase<Widget, Scaffold> {
       data = android(context);
     }
 
-    var scaffoldBody = data?.bodyBuilder(context) ?? bodyBuilder(context);
+    var scaffoldBody = data?.bodyBuilder(context) ??
+        (bodyBuilder == null ? null : bodyBuilder(context));
     if (scaffoldBody == null) {
       // This will be removed in future versions
       scaffoldBody = data?.body ?? body;
@@ -181,32 +183,36 @@ class PlatformScaffold extends PlatformWidgetBase<Widget, Scaffold> {
         resizeToAvoidBottomInset: data?.resizeToAvoidBottomInsetTab ?? true,
         tabBar: tabBar,
         tabBuilder: (BuildContext context, int index) {
-          // So that we can get the index from the tab selection
           if (data?.iosNavigationTabBarBuilder != null) {
             navigationBar = data?.iosNavigationTabBarBuilder(context, index);
           }
-          //use iosTabBodyBuilder first, then the bodyBuilder
-          var child = data?.iosTabBodyBuilder(context, index);
-          if (child == null) {
-            child = data?.bodyBuilder(context) ?? bodyBuilder(context);
-          }
-          if (child == null) {
-            // This will be removed in future versions
-            child = data?.body ?? body;
-          }
 
-          return CupertinoPageScaffold(
-            backgroundColor: data?.backgroundColor ?? backgroundColor,
-            child: iosContentPad(context, child, navigationBar, tabBar),
-            navigationBar: navigationBar,
-            resizeToAvoidBottomInset: data?.resizeToAvoidBottomInset ?? true,
+          return CupertinoTabView(
+            builder: (BuildContext context) {
+              var child = data?.iosTabBodyBuilder(context, index);
+              if (child == null) {
+                child = data?.bodyBuilder(context) ??
+                    (bodyBuilder == null ? null : bodyBuilder(context));
+              }
+              if (child == null) {
+                child = data?.body ?? body;
+              }
+
+              return CupertinoPageScaffold(
+                navigationBar: navigationBar,
+                child: iosContentPad(context, child, navigationBar, tabBar),
+                backgroundColor: data?.backgroundColor ?? backgroundColor,
+                resizeToAvoidBottomInset:
+                    data?.resizeToAvoidBottomInset ?? true,
+              );
+            },
           );
         },
       );
     } else {
-      var child = data?.bodyBuilder(context) ?? bodyBuilder(context);
+      var child = data?.bodyBuilder(context) ??
+          (bodyBuilder == null ? null : bodyBuilder(context));
       if (child == null) {
-        // This will be removed in future versions
         child = data?.body ?? body;
       }
 
